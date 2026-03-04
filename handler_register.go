@@ -196,7 +196,11 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 	}
 
 	// Mark invite as used
-	s.inviteStore.MarkInviteUsedByHash(inviteTokenHash)
+	if err := s.inviteStore.MarkInviteUsedByHash(inviteTokenHash); err != nil {
+		slog.Error("registration finish: failed to mark invite used", "error", err)
+		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to finalize registration"})
+		return
+	}
 
 	// Create session
 	token, sessionTokenHash, err := GenerateToken()

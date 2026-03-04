@@ -23,6 +23,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		Domain:   s.config.CookieDomain,
 		Secure:   s.config.SecureCookie,
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	axon.WriteJSON(w, http.StatusOK, map[string]string{"message": "logged out"})

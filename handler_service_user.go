@@ -27,6 +27,8 @@ type serviceUserHandler struct {
 }
 
 func (h *serviceUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req serviceUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		axon.WriteError(w, http.StatusBadRequest, "invalid request body")

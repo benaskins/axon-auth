@@ -156,8 +156,10 @@ func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update sign count
-	s.passkeyStore.UpdateSignCount(credential.ID, credential.Authenticator.SignCount)
+	// Update sign count — log but don't fail login
+	if err := s.passkeyStore.UpdateSignCount(credential.ID, credential.Authenticator.SignCount); err != nil {
+		slog.Error("login finish: failed to update sign count", "error", err, "user_id", user.ID)
+	}
 
 	// Create session
 	token, tokenHash, err := GenerateToken()

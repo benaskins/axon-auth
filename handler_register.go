@@ -22,9 +22,10 @@ type registrationBeginRequest struct {
 }
 
 func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req registrationBeginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
@@ -87,6 +88,8 @@ func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request)
 		MaxAge:   300,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   s.config.SecureCookie,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	// Store invite token for finish step
@@ -96,6 +99,8 @@ func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request)
 		MaxAge:   300,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   s.config.SecureCookie,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	axon.WriteJSON(w, http.StatusOK, map[string]any{
@@ -110,9 +115,10 @@ type registrationFinishRequest struct {
 }
 
 func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req registrationFinishRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
@@ -214,11 +220,12 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 		Domain:   s.config.CookieDomain,
 		Secure:   s.config.SecureCookie,
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	// Clear temporary cookies
-	http.SetCookie(w, &http.Cookie{Name: "webauthn_session", Value: "", MaxAge: -1, Path: "/", HttpOnly: true})
-	http.SetCookie(w, &http.Cookie{Name: "invite_token", Value: "", MaxAge: -1, Path: "/", HttpOnly: true})
+	http.SetCookie(w, &http.Cookie{Name: "webauthn_session", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: "invite_token", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
 
 	axon.WriteJSON(w, http.StatusOK, map[string]any{
 		"user_id":    user.ID,

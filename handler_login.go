@@ -19,9 +19,10 @@ type loginBeginRequest struct {
 }
 
 func (s *Server) handleLoginBegin(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req loginBeginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
@@ -33,14 +34,14 @@ func (s *Server) handleLoginBegin(w http.ResponseWriter, r *http.Request) {
 	// Get user
 	user, err := s.userStore.GetUserByEmail(req.Email)
 	if err != nil {
-		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "user not found"})
+		axon.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
 		return
 	}
 
 	// Get user's passkeys
 	credentials, err := s.passkeyStore.GetUserPasskeys(user.ID)
 	if err != nil || len(credentials) == 0 {
-		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "no passkeys registered"})
+		axon.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
 		return
 	}
 
@@ -59,6 +60,8 @@ func (s *Server) handleLoginBegin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   300,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   s.config.SecureCookie,
+		SameSite: http.SameSiteLaxMode,
 	})
 	http.SetCookie(w, &http.Cookie{
 		Name:     "login_user_id",
@@ -66,6 +69,8 @@ func (s *Server) handleLoginBegin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   300,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   s.config.SecureCookie,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	axon.WriteJSON(w, http.StatusOK, map[string]any{
@@ -80,9 +85,10 @@ type loginFinishRequest struct {
 }
 
 func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req loginFinishRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
@@ -175,11 +181,12 @@ func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
 		Domain:   s.config.CookieDomain,
 		Secure:   s.config.SecureCookie,
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	// Clear temporary cookies
-	http.SetCookie(w, &http.Cookie{Name: "webauthn_session", Value: "", MaxAge: -1, Path: "/", HttpOnly: true})
-	http.SetCookie(w, &http.Cookie{Name: "login_user_id", Value: "", MaxAge: -1, Path: "/", HttpOnly: true})
+	http.SetCookie(w, &http.Cookie{Name: "webauthn_session", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: "login_user_id", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
 
 	response := map[string]any{
 		"user_id":    user.ID,

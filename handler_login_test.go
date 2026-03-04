@@ -28,16 +28,16 @@ func TestLoginBegin(t *testing.T) {
 
 	server.Handler().ServeHTTP(w, req)
 
-	// User has no passkeys registered, should return 400
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status 400, got %d: %s", w.Code, w.Body.String())
+	// User has no passkeys registered, should return 401 with generic error
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d: %s", w.Code, w.Body.String())
 	}
 
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
 
-	if response["error"] != "no passkeys registered" {
-		t.Errorf("expected 'no passkeys registered' error, got %v", response["error"])
+	if response["error"] != "invalid credentials" {
+		t.Errorf("expected 'invalid credentials' error, got %v", response["error"])
 	}
 }
 
@@ -55,8 +55,8 @@ func TestLoginBegin_UserNotFound(t *testing.T) {
 
 	server.Handler().ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status 400, got %d", w.Code)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d", w.Code)
 	}
 }
 

@@ -20,12 +20,12 @@ func setupTestServer(t *testing.T) (*auth.Server, *authtest.MemoryUserStore, *au
 	invites := authtest.NewMemoryInviteStore()
 
 	cfg := auth.Config{
-		RPID:            "auth.studio.internal",
-		RPDisplayName:   "Aurelia Auth",
-		RPOrigins:       []string{"https://auth.studio.internal"},
-		CookieDomain:    ".studio.internal",
+		RPID:            "auth.example.com",
+		RPDisplayName:   "Test Auth",
+		RPOrigins:       []string{"https://auth.example.com"},
+		CookieDomain:    ".example.com",
 		SecureCookie:    true,
-		BaseURL:         "https://auth.studio.internal",
+		BaseURL:         "https://auth.example.com",
 		SessionDuration: 7 * 24 * time.Hour,
 		InviteDuration:  24 * time.Hour,
 	}

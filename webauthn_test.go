@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewWebAuthnWrapper(t *testing.T) {
-	wrapper, err := NewWebAuthnWrapper("auth.studio.internal", "Aurelia Auth", []string{"https://auth.studio.internal"})
+	wrapper, err := NewWebAuthnWrapper("auth.example.com", "Test Auth", []string{"https://auth.example.com"})
 	if err != nil {
 		t.Fatalf("failed to create webauthn wrapper: %v", err)
 	}

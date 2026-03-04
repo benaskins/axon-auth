@@ -3,6 +3,7 @@ package auth
 import (
 	"embed"
 	"net/http"
+	"time"
 
 	"github.com/benaskins/axon"
 )
@@ -50,6 +51,12 @@ func (s *Server) setupRoutes() {
 	s.mux.HandleFunc("POST /api/login/begin", s.handleLoginBegin)
 	s.mux.HandleFunc("POST /api/login/finish", s.handleLoginFinish)
 	s.mux.HandleFunc("POST /api/logout", s.handleLogout)
+
+	s.mux.Handle("POST /internal/service-user", &serviceUserHandler{
+		userStore:    s.userStore,
+		sessionStore: s.sessionStore,
+		sessionTTL:   365 * 24 * time.Hour,
+	})
 
 	if s.staticFiles != nil {
 		s.mux.Handle("/", axon.SPAHandler(*s.staticFiles, "static"))

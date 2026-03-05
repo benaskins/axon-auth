@@ -3,7 +3,7 @@ module github.com/benaskins/axon-auth
 go 1.24.1
 
 require (
-	github.com/benaskins/axon v0.1.0
+	github.com/benaskins/axon v0.3.0
 	github.com/go-webauthn/webauthn v0.11.2
 )
 
@@ -39,5 +39,3 @@ require (
 	golang.org/x/text v0.29.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 )
-
-replace github.com/benaskins/axon => ../axon

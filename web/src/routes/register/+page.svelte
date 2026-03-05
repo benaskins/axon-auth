@@ -91,7 +91,7 @@
       }
 
       // Step 4: Redirect to chat
-      window.location.href = 'https://chat.studio.internal';
+      window.location.href = '/';
     } catch (err) {
       if (err.name === 'NotAllowedError') {
         error = 'Passkey creation cancelled or failed';

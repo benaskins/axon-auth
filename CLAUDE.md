@@ -2,7 +2,7 @@
 
 ## Overview
 
-axon-auth is a WebAuthn-based authentication library providing passkey registration, login, session management, and invite-based user onboarding. It defines store interfaces for persistence — PostgreSQL implementations live in aurelia-core-infrastructure.
+axon-auth is a WebAuthn-based authentication library providing passkey registration, login, session management, and invite-based user onboarding. It defines store interfaces for persistence — PostgreSQL implementations live in the host application.
 
 ## Build & Test
 

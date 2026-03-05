@@ -13,7 +13,7 @@
   let cliToken = $state('');
 
   onMount(() => {
-    redirectUrl = $page.url.searchParams.get('redirect') || 'https://chat.studio.internal';
+    redirectUrl = $page.url.searchParams.get('redirect') || '/';
     cliMode = $page.url.searchParams.get('mode') === 'cli';
   });
 

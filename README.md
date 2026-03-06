@@ -1,6 +1,6 @@
 # axon-auth
 
-A WebAuthn-based authentication library with passkey registration, login, session management, and invite-based user onboarding.
+A WebAuthn-based authentication library with passkey registration, login, session management, and invite-based user onboarding. Part of [lamina](https://github.com/benaskins/lamina) — each axon package can be used independently.
 
 Defines store interfaces for persistence, allowing any backend (PostgreSQL, in-memory, etc.) to be plugged in.
 

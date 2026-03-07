@@ -15,6 +15,11 @@ func TestIsLocalRedirect(t *testing.T) {
 		{"https localhost", "https://localhost:9876/callback", false},
 		{"empty", "", false},
 		{"javascript", "javascript:alert(1)", false},
+		{"data URL", "data:text/html,<h1>hi</h1>", false},
+		{"relative path", "/callback", false},
+		{"ftp scheme", "ftp://localhost:21/file", false},
+		{"non-local host", "http://example.com/callback", false},
+		{"localhost with path only", "http://localhost", true},
 	}
 
 	for _, tt := range tests {

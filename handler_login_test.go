@@ -41,6 +41,44 @@ func TestLoginBegin(t *testing.T) {
 	}
 }
 
+func TestLoginBegin_MissingEmail(t *testing.T) {
+	server, _, _, _, _ := setupTestServer(t)
+
+	body := map[string]string{}
+	bodyJSON, _ := json.Marshal(body)
+
+	req, _ := http.NewRequest("POST", "/api/login/begin", bytes.NewBuffer(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.Handler().ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status 400, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &response)
+
+	if response["error"] != "email is required" {
+		t.Errorf("expected 'email is required' error, got %v", response["error"])
+	}
+}
+
+func TestLoginBegin_InvalidBody(t *testing.T) {
+	server, _, _, _, _ := setupTestServer(t)
+
+	req, _ := http.NewRequest("POST", "/api/login/begin", bytes.NewBufferString("not json"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.Handler().ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestLoginBegin_UserNotFound(t *testing.T) {
 	server, _, _, _, _ := setupTestServer(t)
 
@@ -57,6 +95,26 @@ func TestLoginBegin_UserNotFound(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected status 401, got %d", w.Code)
+	}
+}
+
+func TestLogout_NoCookie(t *testing.T) {
+	server, _, _, _, _ := setupTestServer(t)
+
+	req, _ := http.NewRequest("POST", "/api/logout", nil)
+	w := httptest.NewRecorder()
+
+	server.Handler().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &response)
+
+	if response["message"] != "no session" {
+		t.Errorf("expected 'no session' message, got %v", response["message"])
 	}
 }
 

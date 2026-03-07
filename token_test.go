@@ -30,6 +30,32 @@ func TestGenerateToken(t *testing.T) {
 	}
 }
 
+func TestGenerateToken_Unique(t *testing.T) {
+	p1, h1, err := GenerateToken()
+	if err != nil {
+		t.Fatalf("first GenerateToken failed: %v", err)
+	}
+	p2, h2, err := GenerateToken()
+	if err != nil {
+		t.Fatalf("second GenerateToken failed: %v", err)
+	}
+
+	if p1 == p2 {
+		t.Error("two generated tokens should not be identical")
+	}
+	if h1 == h2 {
+		t.Error("two generated hashes should not be identical")
+	}
+}
+
+func TestHashToken_DifferentInputs(t *testing.T) {
+	h1 := HashToken("token-a")
+	h2 := HashToken("token-b")
+	if h1 == h2 {
+		t.Error("different inputs should produce different hashes")
+	}
+}
+
 func TestHashToken_Deterministic(t *testing.T) {
 	token := "test-token-value"
 	h1 := HashToken(token)

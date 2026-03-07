@@ -68,6 +68,42 @@ func TestServiceUserHandler_Idempotent(t *testing.T) {
 	}
 }
 
+func TestServiceUserHandler_InvalidBody(t *testing.T) {
+	server, _, _, _, _ := setupTestServer(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader([]byte("not json")))
+	w := httptest.NewRecorder()
+	server.Handler().ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestServiceUserHandler_DefaultDisplayName(t *testing.T) {
+	server, users, _, _, _ := setupTestServer(t)
+
+	body, _ := json.Marshal(map[string]string{
+		"username": "xagent-nodisplay",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	server.Handler().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	user, err := users.GetUserByUsername("xagent-nodisplay")
+	if err != nil {
+		t.Fatalf("user not found: %v", err)
+	}
+
+	if user.DisplayName != "xagent-nodisplay" {
+		t.Errorf("expected display_name to default to username, got %q", user.DisplayName)
+	}
+}
+
 func TestServiceUserHandler_MissingUsername(t *testing.T) {
 	server, _, _, _, _ := setupTestServer(t)
 

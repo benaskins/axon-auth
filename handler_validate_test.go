@@ -82,6 +82,31 @@ func TestValidateEndpoint_NoCookie(t *testing.T) {
 	}
 }
 
+func TestValidateEndpoint_UserNotFound(t *testing.T) {
+	server, _, sessions, _, _ := setupTestServer(t)
+
+	// Create session for a user ID that does not exist in the user store
+	token, hash, _ := auth.GenerateToken()
+	sessions.CreateSession("nonexistent-user", hash, time.Now().Add(7*24*time.Hour))
+
+	req, _ := http.NewRequest("GET", "/api/validate", nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: token})
+	w := httptest.NewRecorder()
+
+	server.Handler().ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d", w.Code)
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &response)
+
+	if response["error"] != "user not found" {
+		t.Errorf("expected 'user not found' error, got %v", response["error"])
+	}
+}
+
 func TestValidateEndpoint_InvalidToken(t *testing.T) {
 	server, _, _, _, _ := setupTestServer(t)
 

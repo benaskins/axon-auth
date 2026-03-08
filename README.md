@@ -1,43 +1,26 @@
 # axon-auth
 
-A WebAuthn-based authentication library with passkey registration, login, session management, and invite-based user onboarding. Part of [lamina](https://github.com/benaskins/lamina) — each axon package can be used independently.
+> Domain package · Part of the [lamina](https://github.com/benaskins/lamina-mono) workspace
 
-Defines store interfaces for persistence, allowing any backend (PostgreSQL, in-memory, etc.) to be plugged in.
+WebAuthn-based authentication with passkey registration, login, session management, and invite-based user onboarding. Defines store interfaces (`UserStore`, `SessionStore`, `PasskeyStore`, `InviteStore`) so any persistence backend can be plugged in. HTTP handlers are composed into a `Server` that mounts onto your existing mux.
 
-## Install
+## Getting started
 
 ```
 go get github.com/benaskins/axon-auth@latest
 ```
 
-Requires Go 1.24+.
+axon-auth is a domain package — it provides types, interfaces, and HTTP handlers but no `main` function. You assemble it in your own composition root by supplying store implementations and configuration. See [`example/main.go`](example/main.go) for a minimal wiring example.
 
-## Usage
+## Key types
 
-```go
-cfg := auth.Config{
-    RPID:          "example.com",
-    RPOrigins:     []string{"https://example.com"},
-    RPDisplayName: "My App",
-    CookieDomain:  ".example.com",
-}
-
-srv := auth.NewServer(cfg, userStore, sessionStore, passkeyStore, inviteStore)
-http.Handle("/", srv)
-```
-
-### Key types
-
-- `User`, `Session`, `Invite` — domain types
-- `UserStore`, `SessionStore`, `PasskeyStore`, `InviteStore` — persistence interfaces
-- `Server` — HTTP handler with registration, login, and session endpoints
-- `WebAuthnWrapper` — WebAuthn protocol wrapper
-- `Config` — relying party and cookie configuration
-
-### Sub-packages
-
-- `authtest` — in-memory mock stores for testing
+- **`Config`** — relying party ID, origins, cookie domain, session/invite durations
+- **`Server`** — HTTP handler with registration, login, validation, and logout endpoints
+- **`User`**, **`Session`**, **`Invite`** — domain types
+- **`UserStore`**, **`SessionStore`**, **`PasskeyStore`**, **`InviteStore`** — persistence interfaces
+- **`WebAuthnWrapper`** — WebAuthn protocol wrapper around go-webauthn
+- **`authtest`** — in-memory mock stores for testing
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT

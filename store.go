@@ -4,11 +4,12 @@ import (
 	"errors"
 	"time"
 
+	"github.com/benaskins/axon"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 
 var (
-	ErrNotFound          = errors.New("not found")
+	ErrNotFound          = axon.ErrNotFound
 	ErrDuplicateUsername = errors.New("username already taken")
 )
 

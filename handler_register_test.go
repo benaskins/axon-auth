@@ -38,20 +38,14 @@ func TestRegistrationBegin(t *testing.T) {
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
 
-	if response["user_id"] == nil {
-		t.Error("expected user_id in response")
-	}
 	if response["options"] == nil {
 		t.Error("expected options in response")
 	}
 
-	// Verify user was created
-	user, err := users.GetUserByEmail("test@example.com")
-	if err != nil {
-		t.Errorf("user should be created: %v", err)
-	}
-	if user.DisplayName != "Test User" {
-		t.Errorf("expected display name Test User, got %s", user.DisplayName)
+	// User should NOT be created yet (deferred to finish step)
+	_, err := users.GetUserByEmail("test@example.com")
+	if err == nil {
+		t.Error("user should not be created during begin step")
 	}
 }
 

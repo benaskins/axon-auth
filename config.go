@@ -11,4 +11,5 @@ type Config struct {
 	BaseURL         string
 	SessionDuration time.Duration
 	InviteDuration  time.Duration
+	InternalAPIKey  string
 }

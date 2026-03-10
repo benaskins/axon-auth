@@ -21,12 +21,20 @@ type serviceUserResponse struct {
 }
 
 type serviceUserHandler struct {
-	userStore    UserStore
-	sessionStore SessionStore
-	sessionTTL   time.Duration
+	userStore      UserStore
+	sessionStore   SessionStore
+	sessionTTL     time.Duration
+	internalAPIKey string
 }
 
 func (h *serviceUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Require a valid internal API key
+	apiKey := r.Header.Get("X-Internal-API-Key")
+	if h.internalAPIKey == "" || apiKey != h.internalAPIKey {
+		axon.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req serviceUserRequest

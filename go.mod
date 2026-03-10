@@ -1,6 +1,6 @@
 module github.com/benaskins/axon-auth
 
-go 1.26.0
+go 1.26.1
 
 require (
 	github.com/benaskins/axon v0.3.0

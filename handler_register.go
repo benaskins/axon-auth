@@ -55,26 +55,27 @@ func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Check if user already exists
+	// Check if user already exists for this invite email
 	existingUser, _ := s.userStore.GetUserByEmail(invite.Email)
 	if existingUser != nil {
 		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "user already exists"})
 		return
 	}
 
-	// Create user (admin if bootstrap invite)
-	user, err := s.userStore.CreateUser(req.Username, invite.Email, req.DisplayName, invite.IsBootstrap)
-	if err != nil {
-		if errors.Is(err, ErrDuplicateUsername) {
-			axon.WriteJSON(w, http.StatusConflict, map[string]string{"error": "username already taken"})
-			return
-		}
-		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create user"})
-		return
+	// Build a temporary user for the WebAuthn ceremony (not persisted yet).
+	// The actual user record is created in the finish step after the browser
+	// completes the credential creation, avoiding orphaned rows if the
+	// browser crashes between begin and finish.
+	tempUser := &User{
+		ID:          invite.Email, // deterministic placeholder
+		Username:    req.Username,
+		Email:       invite.Email,
+		DisplayName: req.DisplayName,
+		IsAdmin:     invite.IsBootstrap,
 	}
 
 	// Begin WebAuthn registration
-	options, sessionData, err := s.webauthn.BeginRegistration(user)
+	options, sessionData, err := s.webauthn.BeginRegistration(tempUser)
 	if err != nil {
 		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to begin registration"})
 		return
@@ -103,8 +104,22 @@ func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request)
 		SameSite: http.SameSiteLaxMode,
 	})
 
+	// Store username and display_name for finish step
+	regMeta, _ := json.Marshal(map[string]string{
+		"username":     req.Username,
+		"display_name": req.DisplayName,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "registration_meta",
+		Value:    base64.StdEncoding.EncodeToString(regMeta),
+		MaxAge:   300,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   s.config.SecureCookie,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	axon.WriteJSON(w, http.StatusOK, map[string]any{
-		"user_id": user.ID,
 		"options": options,
 	})
 }
@@ -161,11 +176,33 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user, err := s.userStore.GetUserByEmail(invite.Email)
+	// Retrieve registration metadata (username, display_name) from cookie
+	regMetaCookie, err := r.Cookie("registration_meta")
 	if err != nil {
-		slog.Error("registration finish: user not found", "email", invite.Email, "error", err)
-		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "user not found"})
+		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "no registration metadata"})
 		return
+	}
+	regMetaJSON, err := base64.StdEncoding.DecodeString(regMetaCookie.Value)
+	if err != nil {
+		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid registration metadata"})
+		return
+	}
+	var regMeta struct {
+		Username    string `json:"username"`
+		DisplayName string `json:"display_name"`
+	}
+	if err := json.Unmarshal(regMetaJSON, &regMeta); err != nil {
+		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid registration metadata"})
+		return
+	}
+
+	// Build temporary user for WebAuthn verification (matches begin step)
+	tempUser := &User{
+		ID:          invite.Email,
+		Username:    regMeta.Username,
+		Email:       invite.Email,
+		DisplayName: regMeta.DisplayName,
+		IsAdmin:     invite.IsBootstrap,
 	}
 
 	// Parse credential
@@ -177,11 +214,23 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Finish registration
-	credential, err := s.webauthn.FinishRegistration(user, sessionData, parsedCredential)
+	// Finish registration (verify credential against the temporary user)
+	credential, err := s.webauthn.FinishRegistration(tempUser, sessionData, parsedCredential)
 	if err != nil {
 		slog.Error("registration finish: verification failed", "error", err)
 		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "failed to verify credential"})
+		return
+	}
+
+	// WebAuthn verification succeeded — now create the real user record
+	user, err := s.userStore.CreateUser(regMeta.Username, invite.Email, regMeta.DisplayName, invite.IsBootstrap)
+	if err != nil {
+		if errors.Is(err, ErrDuplicateUsername) {
+			axon.WriteJSON(w, http.StatusConflict, map[string]string{"error": "username already taken"})
+			return
+		}
+		slog.Error("registration finish: failed to create user", "error", err)
+		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create user"})
 		return
 	}
 
@@ -228,8 +277,9 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 	})
 
 	// Clear temporary cookies
-	http.SetCookie(w, &http.Cookie{Name: "webauthn_session", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
-	http.SetCookie(w, &http.Cookie{Name: "invite_token", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: "webauthn_session", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, Secure: s.config.SecureCookie, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: "invite_token", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, Secure: s.config.SecureCookie, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: "registration_meta", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, Secure: s.config.SecureCookie, SameSite: http.SameSiteLaxMode})
 
 	axon.WriteJSON(w, http.StatusOK, map[string]any{
 		"user_id":    user.ID,

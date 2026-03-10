@@ -187,8 +187,8 @@ func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Clear temporary cookies
-	http.SetCookie(w, &http.Cookie{Name: "webauthn_session", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
-	http.SetCookie(w, &http.Cookie{Name: "login_user_id", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: "webauthn_session", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, Secure: s.config.SecureCookie, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: "login_user_id", Value: "", MaxAge: -1, Path: "/", HttpOnly: true, Secure: s.config.SecureCookie, SameSite: http.SameSiteLaxMode})
 
 	response := map[string]any{
 		"user_id":    user.ID,

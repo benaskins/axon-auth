@@ -16,6 +16,7 @@ func TestServiceUserHandler_CreatesUserAndSession(t *testing.T) {
 		"display_name": "Test Runner",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader(body))
+	req.Header.Set("X-Internal-API-Key", "test-internal-api-key")
 	w := httptest.NewRecorder()
 	server.Handler().ServeHTTP(w, req)
 
@@ -45,6 +46,7 @@ func TestServiceUserHandler_Idempotent(t *testing.T) {
 			"display_name": "Test Runner",
 		})
 		req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader(body))
+		req.Header.Set("X-Internal-API-Key", "test-internal-api-key")
 		w := httptest.NewRecorder()
 		server.Handler().ServeHTTP(w, req)
 
@@ -72,6 +74,7 @@ func TestServiceUserHandler_InvalidBody(t *testing.T) {
 	server, _, _, _, _ := setupTestServer(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader([]byte("not json")))
+	req.Header.Set("X-Internal-API-Key", "test-internal-api-key")
 	w := httptest.NewRecorder()
 	server.Handler().ServeHTTP(w, req)
 
@@ -87,6 +90,7 @@ func TestServiceUserHandler_DefaultDisplayName(t *testing.T) {
 		"username": "xagent-nodisplay",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader(body))
+	req.Header.Set("X-Internal-API-Key", "test-internal-api-key")
 	w := httptest.NewRecorder()
 	server.Handler().ServeHTTP(w, req)
 
@@ -109,10 +113,44 @@ func TestServiceUserHandler_MissingUsername(t *testing.T) {
 
 	body, _ := json.Marshal(map[string]string{"display_name": "Test Runner"})
 	req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader(body))
+	req.Header.Set("X-Internal-API-Key", "test-internal-api-key")
 	w := httptest.NewRecorder()
 	server.Handler().ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestServiceUserHandler_NoAPIKey(t *testing.T) {
+	server, _, _, _, _ := setupTestServer(t)
+
+	body, _ := json.Marshal(map[string]string{
+		"username":     "xagent-runner",
+		"display_name": "Test Runner",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	server.Handler().ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestServiceUserHandler_WrongAPIKey(t *testing.T) {
+	server, _, _, _, _ := setupTestServer(t)
+
+	body, _ := json.Marshal(map[string]string{
+		"username":     "xagent-runner",
+		"display_name": "Test Runner",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/internal/service-user", bytes.NewReader(body))
+	req.Header.Set("X-Internal-API-Key", "wrong-key")
+	w := httptest.NewRecorder()
+	server.Handler().ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
 	}
 }

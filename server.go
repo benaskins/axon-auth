@@ -53,9 +53,10 @@ func (s *Server) setupRoutes() {
 	s.mux.HandleFunc("POST /api/logout", s.handleLogout)
 
 	s.mux.Handle("POST /internal/service-user", &serviceUserHandler{
-		userStore:    s.userStore,
-		sessionStore: s.sessionStore,
-		sessionTTL:   365 * 24 * time.Hour,
+		userStore:      s.userStore,
+		sessionStore:   s.sessionStore,
+		sessionTTL:     365 * 24 * time.Hour,
+		internalAPIKey: s.config.InternalAPIKey,
 	})
 
 	if s.staticFiles != nil {

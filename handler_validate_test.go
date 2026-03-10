@@ -28,6 +28,7 @@ func setupTestServer(t *testing.T) (*auth.Server, *authtest.MemoryUserStore, *au
 		BaseURL:         "https://auth.example.com",
 		SessionDuration: 7 * 24 * time.Hour,
 		InviteDuration:  24 * time.Hour,
+		InternalAPIKey:  "test-internal-api-key",
 	}
 
 	server, err := auth.NewServer(cfg, users, sessions, passkeys, invites, nil)

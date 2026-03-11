@@ -31,15 +31,17 @@ func (s *Server) handleLoginBegin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+
 	// Get user
-	user, err := s.userStore.GetUserByEmail(req.Email)
+	user, err := s.userStore.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		axon.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
 		return
 	}
 
 	// Get user's passkeys
-	credentials, err := s.passkeyStore.GetUserPasskeys(user.ID)
+	credentials, err := s.passkeyStore.GetUserPasskeys(ctx, user.ID)
 	if err != nil || len(credentials) == 0 {
 		axon.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
 		return
@@ -124,7 +126,9 @@ func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := s.userStore.GetUserByID(userIDCookie.Value)
+	ctx := r.Context()
+
+	user, err := s.userStore.GetUserByID(ctx, userIDCookie.Value)
 	if err != nil {
 		slog.Error("login finish: user not found", "error", err, "user_id", userIDCookie.Value)
 		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "user not found"})
@@ -132,7 +136,7 @@ func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user's passkeys
-	credentials, err := s.passkeyStore.GetUserPasskeys(user.ID)
+	credentials, err := s.passkeyStore.GetUserPasskeys(ctx, user.ID)
 	if err != nil {
 		slog.Error("login finish: failed to get passkeys", "error", err)
 		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to get passkeys"})
@@ -157,7 +161,7 @@ func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update sign count — log but don't fail login
-	if err := s.passkeyStore.UpdateSignCount(credential.ID, credential.Authenticator.SignCount); err != nil {
+	if err := s.passkeyStore.UpdateSignCount(ctx, credential.ID, credential.Authenticator.SignCount); err != nil {
 		slog.Error("login finish: failed to update sign count", "error", err, "user_id", user.ID)
 	}
 
@@ -168,7 +172,7 @@ func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := s.sessionStore.CreateSession(user.ID, tokenHash, time.Now().Add(s.config.SessionDuration))
+	session, err := s.sessionStore.CreateSession(ctx, user.ID, tokenHash, time.Now().Add(s.config.SessionDuration))
 	if err != nil {
 		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create session"})
 		return

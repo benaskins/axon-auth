@@ -52,12 +52,14 @@ func (h *serviceUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		req.DisplayName = req.Username
 	}
 
+	ctx := r.Context()
+
 	// Idempotent: look up existing user first
-	user, err := h.userStore.GetUserByUsername(req.Username)
+	user, err := h.userStore.GetUserByUsername(ctx, req.Username)
 	if errors.Is(err, ErrNotFound) {
 		// Create new service user (no passkey, no invite)
 		email := req.Username + "@service.internal"
-		user, err = h.userStore.CreateUser(req.Username, email, req.DisplayName, false)
+		user, err = h.userStore.CreateUser(ctx, req.Username, email, req.DisplayName, false)
 		if err != nil {
 			slog.Error("service-user: failed to create user", "error", err)
 			axon.WriteError(w, http.StatusInternalServerError, "failed to create user")
@@ -78,7 +80,7 @@ func (h *serviceUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.sessionStore.CreateSession(user.ID, tokenHash, time.Now().Add(h.sessionTTL))
+	_, err = h.sessionStore.CreateSession(ctx, user.ID, tokenHash, time.Now().Add(h.sessionTTL))
 	if err != nil {
 		slog.Error("service-user: failed to create session", "error", err)
 		axon.WriteError(w, http.StatusInternalServerError, "failed to create session")

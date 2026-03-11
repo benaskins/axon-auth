@@ -13,14 +13,16 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+
 	tokenHash := HashToken(cookie.Value)
-	session, err := s.sessionStore.ValidateSessionByHash(tokenHash)
+	session, err := s.sessionStore.ValidateSessionByHash(ctx, tokenHash)
 	if err != nil {
 		axon.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid session"})
 		return
 	}
 
-	user, err := s.userStore.GetUserByID(session.UserID)
+	user, err := s.userStore.GetUserByID(ctx, session.UserID)
 	if err != nil {
 		axon.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "user not found"})
 		return

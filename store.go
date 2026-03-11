@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -9,38 +10,38 @@ import (
 )
 
 var (
-	ErrNotFound          = axon.ErrNotFound
+	ErrNotFound         = axon.ErrNotFound
 	ErrDuplicateUsername = errors.New("username already taken")
 )
 
 type UserStore interface {
-	CreateUser(username, email, displayName string, isAdmin bool) (*User, error)
-	GetUserByEmail(email string) (*User, error)
-	GetUserByUsername(username string) (*User, error)
-	GetUserByID(id string) (*User, error)
-	ListUsers() ([]*User, error)
-	DeleteUser(id string) error
-	SetAdmin(id string, isAdmin bool) error
+	CreateUser(ctx context.Context, username, email, displayName string, isAdmin bool) (*User, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByUsername(ctx context.Context, username string) (*User, error)
+	GetUserByID(ctx context.Context, id string) (*User, error)
+	ListUsers(ctx context.Context) ([]*User, error)
+	DeleteUser(ctx context.Context, id string) error
+	SetAdmin(ctx context.Context, id string, isAdmin bool) error
 }
 
 type SessionStore interface {
-	CreateSession(userID, tokenHash string, expiresAt time.Time) (*Session, error)
-	ValidateSessionByHash(tokenHash string) (*Session, error)
-	DeleteSessionByHash(tokenHash string) error
-	DeleteUserSessions(userID string) error
-	CleanExpiredSessions() error
+	CreateSession(ctx context.Context, userID, tokenHash string, expiresAt time.Time) (*Session, error)
+	ValidateSessionByHash(ctx context.Context, tokenHash string) (*Session, error)
+	DeleteSessionByHash(ctx context.Context, tokenHash string) error
+	DeleteUserSessions(ctx context.Context, userID string) error
+	CleanExpiredSessions(ctx context.Context) error
 }
 
 type PasskeyStore interface {
-	SavePasskey(userID string, credential *webauthn.Credential, deviceName string) error
-	GetUserPasskeys(userID string) ([]webauthn.Credential, error)
-	UpdateSignCount(credentialID []byte, signCount uint32) error
-	DeletePasskey(credentialID []byte) error
+	SavePasskey(ctx context.Context, userID string, credential *webauthn.Credential, deviceName string) error
+	GetUserPasskeys(ctx context.Context, userID string) ([]webauthn.Credential, error)
+	UpdateSignCount(ctx context.Context, credentialID []byte, signCount uint32) error
+	DeletePasskey(ctx context.Context, credentialID []byte) error
 }
 
 type InviteStore interface {
-	CreateInvite(email, tokenHash string, expiresAt time.Time, isBootstrap bool) (*Invite, error)
-	ValidateInviteByHash(tokenHash string) (*Invite, error)
-	MarkInviteUsedByHash(tokenHash string) error
-	CleanExpiredInvites() error
+	CreateInvite(ctx context.Context, email, tokenHash string, expiresAt time.Time, isBootstrap bool) (*Invite, error)
+	ValidateInviteByHash(ctx context.Context, tokenHash string) (*Invite, error)
+	MarkInviteUsedByHash(ctx context.Context, tokenHash string) error
+	CleanExpiredInvites(ctx context.Context) error
 }

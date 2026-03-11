@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -9,13 +10,13 @@ import (
 
 // CreateBootstrapInvite creates an admin bootstrap invite for the given email.
 // It returns the plaintext token for use in a registration URL.
-func CreateBootstrapInvite(invites InviteStore, email string, duration time.Duration) (string, error) {
+func CreateBootstrapInvite(ctx context.Context, invites InviteStore, email string, duration time.Duration) (string, error) {
 	token, hash, err := GenerateToken()
 	if err != nil {
 		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	invite, err := invites.CreateInvite(email, hash, time.Now().Add(duration), true)
+	invite, err := invites.CreateInvite(ctx, email, hash, time.Now().Add(duration), true)
 	if err != nil {
 		return "", fmt.Errorf("failed to create bootstrap invite: %w", err)
 	}

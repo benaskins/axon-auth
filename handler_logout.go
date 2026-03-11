@@ -14,7 +14,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tokenHash := HashToken(cookie.Value)
-	s.sessionStore.DeleteSessionByHash(tokenHash)
+	s.sessionStore.DeleteSessionByHash(r.Context(), tokenHash)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    "",

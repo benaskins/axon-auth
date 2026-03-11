@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,11 +13,12 @@ import (
 )
 
 func TestRegistrationBegin(t *testing.T) {
+	ctx := context.Background()
 	server, users, _, _, invites := setupTestServer(t)
 
 	// Create invite
 	token, hash, _ := auth.GenerateToken()
-	invites.CreateInvite("test@example.com", hash, time.Now().Add(24*time.Hour), false)
+	invites.CreateInvite(ctx, "test@example.com", hash, time.Now().Add(24*time.Hour), false)
 
 	body := map[string]string{
 		"token":        token,
@@ -43,7 +45,7 @@ func TestRegistrationBegin(t *testing.T) {
 	}
 
 	// User should NOT be created yet (deferred to finish step)
-	_, err := users.GetUserByEmail("test@example.com")
+	_, err := users.GetUserByEmail(ctx, "test@example.com")
 	if err == nil {
 		t.Error("user should not be created during begin step")
 	}
@@ -65,9 +67,10 @@ func TestRegistrationBegin_UsernameValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			srv, _, _, _, inv := setupTestServer(t)
 			tok, hash, _ := auth.GenerateToken()
-			inv.CreateInvite("test-"+tt.username+"@example.com", hash, time.Now().Add(24*time.Hour), false)
+			inv.CreateInvite(ctx, "test-"+tt.username+"@example.com", hash, time.Now().Add(24*time.Hour), false)
 
 			body := map[string]string{
 				"token":        tok,
@@ -88,13 +91,14 @@ func TestRegistrationBegin_UsernameValidation(t *testing.T) {
 }
 
 func TestRegistrationBegin_UsernameUniqueness(t *testing.T) {
+	ctx := context.Background()
 	server, users, _, _, invites := setupTestServer(t)
 
 	// Create an existing user with username "taken"
-	users.CreateUser("taken", "existing@example.com", "Existing User", false)
+	users.CreateUser(ctx, "taken", "existing@example.com", "Existing User", false)
 
 	token, hash, _ := auth.GenerateToken()
-	invites.CreateInvite("new@example.com", hash, time.Now().Add(24*time.Hour), false)
+	invites.CreateInvite(ctx, "new@example.com", hash, time.Now().Add(24*time.Hour), false)
 
 	body := map[string]string{
 		"token":        token,

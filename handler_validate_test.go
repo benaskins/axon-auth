@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -40,11 +41,12 @@ func setupTestServer(t *testing.T) (*auth.Server, *authtest.MemoryUserStore, *au
 }
 
 func TestValidateEndpoint_Valid(t *testing.T) {
+	ctx := context.Background()
 	server, users, sessions, _, _ := setupTestServer(t)
 
-	user, _ := users.CreateUser("testuser", "test@example.com", "Test User", false)
+	user, _ := users.CreateUser(ctx, "testuser", "test@example.com", "Test User", false)
 	token, hash, _ := auth.GenerateToken()
-	sessions.CreateSession(user.ID, hash, time.Now().Add(7*24*time.Hour))
+	sessions.CreateSession(ctx, user.ID, hash, time.Now().Add(7*24*time.Hour))
 
 	req, _ := http.NewRequest("GET", "/api/validate", nil)
 	req.AddCookie(&http.Cookie{Name: "session", Value: token})
@@ -84,11 +86,12 @@ func TestValidateEndpoint_NoCookie(t *testing.T) {
 }
 
 func TestValidateEndpoint_UserNotFound(t *testing.T) {
+	ctx := context.Background()
 	server, _, sessions, _, _ := setupTestServer(t)
 
 	// Create session for a user ID that does not exist in the user store
 	token, hash, _ := auth.GenerateToken()
-	sessions.CreateSession("nonexistent-user", hash, time.Now().Add(7*24*time.Hour))
+	sessions.CreateSession(ctx, "nonexistent-user", hash, time.Now().Add(7*24*time.Hour))
 
 	req, _ := http.NewRequest("GET", "/api/validate", nil)
 	req.AddCookie(&http.Cookie{Name: "session", Value: token})

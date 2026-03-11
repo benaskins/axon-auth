@@ -3,6 +3,7 @@
 package authtest
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -23,7 +24,7 @@ func NewMemoryUserStore() *MemoryUserStore {
 	return &MemoryUserStore{users: make(map[string]*auth.User)}
 }
 
-func (s *MemoryUserStore) CreateUser(username, email, displayName string, isAdmin bool) (*auth.User, error) {
+func (s *MemoryUserStore) CreateUser(_ context.Context, username, email, displayName string, isAdmin bool) (*auth.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -50,7 +51,7 @@ func (s *MemoryUserStore) CreateUser(username, email, displayName string, isAdmi
 	return copyUser(user), nil
 }
 
-func (s *MemoryUserStore) GetUserByEmail(email string) (*auth.User, error) {
+func (s *MemoryUserStore) GetUserByEmail(_ context.Context, email string) (*auth.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -62,7 +63,7 @@ func (s *MemoryUserStore) GetUserByEmail(email string) (*auth.User, error) {
 	return nil, auth.ErrNotFound
 }
 
-func (s *MemoryUserStore) GetUserByUsername(username string) (*auth.User, error) {
+func (s *MemoryUserStore) GetUserByUsername(_ context.Context, username string) (*auth.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -74,7 +75,7 @@ func (s *MemoryUserStore) GetUserByUsername(username string) (*auth.User, error)
 	return nil, auth.ErrNotFound
 }
 
-func (s *MemoryUserStore) GetUserByID(id string) (*auth.User, error) {
+func (s *MemoryUserStore) GetUserByID(_ context.Context, id string) (*auth.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -85,7 +86,7 @@ func (s *MemoryUserStore) GetUserByID(id string) (*auth.User, error) {
 	return copyUser(u), nil
 }
 
-func (s *MemoryUserStore) ListUsers() ([]*auth.User, error) {
+func (s *MemoryUserStore) ListUsers(_ context.Context) ([]*auth.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -96,14 +97,14 @@ func (s *MemoryUserStore) ListUsers() ([]*auth.User, error) {
 	return users, nil
 }
 
-func (s *MemoryUserStore) DeleteUser(id string) error {
+func (s *MemoryUserStore) DeleteUser(_ context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.users, id)
 	return nil
 }
 
-func (s *MemoryUserStore) SetAdmin(id string, isAdmin bool) error {
+func (s *MemoryUserStore) SetAdmin(_ context.Context, id string, isAdmin bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -132,7 +133,7 @@ func NewMemorySessionStore() *MemorySessionStore {
 	return &MemorySessionStore{sessions: make(map[string]*auth.Session)}
 }
 
-func (s *MemorySessionStore) CreateSession(userID, tokenHash string, expiresAt time.Time) (*auth.Session, error) {
+func (s *MemorySessionStore) CreateSession(_ context.Context, userID, tokenHash string, expiresAt time.Time) (*auth.Session, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -150,7 +151,7 @@ func (s *MemorySessionStore) CreateSession(userID, tokenHash string, expiresAt t
 	return copySession(session), nil
 }
 
-func (s *MemorySessionStore) ValidateSessionByHash(tokenHash string) (*auth.Session, error) {
+func (s *MemorySessionStore) ValidateSessionByHash(_ context.Context, tokenHash string) (*auth.Session, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -161,14 +162,14 @@ func (s *MemorySessionStore) ValidateSessionByHash(tokenHash string) (*auth.Sess
 	return copySession(session), nil
 }
 
-func (s *MemorySessionStore) DeleteSessionByHash(tokenHash string) error {
+func (s *MemorySessionStore) DeleteSessionByHash(_ context.Context, tokenHash string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sessions, tokenHash)
 	return nil
 }
 
-func (s *MemorySessionStore) DeleteUserSessions(userID string) error {
+func (s *MemorySessionStore) DeleteUserSessions(_ context.Context, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -180,7 +181,7 @@ func (s *MemorySessionStore) DeleteUserSessions(userID string) error {
 	return nil
 }
 
-func (s *MemorySessionStore) CleanExpiredSessions() error {
+func (s *MemorySessionStore) CleanExpiredSessions(_ context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -208,7 +209,7 @@ func NewMemoryPasskeyStore() *MemoryPasskeyStore {
 	return &MemoryPasskeyStore{passkeys: make(map[string][]webauthn.Credential)}
 }
 
-func (s *MemoryPasskeyStore) SavePasskey(userID string, credential *webauthn.Credential, deviceName string) error {
+func (s *MemoryPasskeyStore) SavePasskey(_ context.Context, userID string, credential *webauthn.Credential, deviceName string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -216,7 +217,7 @@ func (s *MemoryPasskeyStore) SavePasskey(userID string, credential *webauthn.Cre
 	return nil
 }
 
-func (s *MemoryPasskeyStore) GetUserPasskeys(userID string) ([]webauthn.Credential, error) {
+func (s *MemoryPasskeyStore) GetUserPasskeys(_ context.Context, userID string) ([]webauthn.Credential, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -228,7 +229,7 @@ func (s *MemoryPasskeyStore) GetUserPasskeys(userID string) ([]webauthn.Credenti
 	return result, nil
 }
 
-func (s *MemoryPasskeyStore) UpdateSignCount(credentialID []byte, signCount uint32) error {
+func (s *MemoryPasskeyStore) UpdateSignCount(_ context.Context, credentialID []byte, signCount uint32) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -243,7 +244,7 @@ func (s *MemoryPasskeyStore) UpdateSignCount(credentialID []byte, signCount uint
 	return nil
 }
 
-func (s *MemoryPasskeyStore) DeletePasskey(credentialID []byte) error {
+func (s *MemoryPasskeyStore) DeletePasskey(_ context.Context, credentialID []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -269,7 +270,7 @@ func NewMemoryInviteStore() *MemoryInviteStore {
 	return &MemoryInviteStore{invites: make(map[string]*auth.Invite)}
 }
 
-func (s *MemoryInviteStore) CreateInvite(email, tokenHash string, expiresAt time.Time, isBootstrap bool) (*auth.Invite, error) {
+func (s *MemoryInviteStore) CreateInvite(_ context.Context, email, tokenHash string, expiresAt time.Time, isBootstrap bool) (*auth.Invite, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -288,7 +289,7 @@ func (s *MemoryInviteStore) CreateInvite(email, tokenHash string, expiresAt time
 	return copyInvite(invite), nil
 }
 
-func (s *MemoryInviteStore) ValidateInviteByHash(tokenHash string) (*auth.Invite, error) {
+func (s *MemoryInviteStore) ValidateInviteByHash(_ context.Context, tokenHash string) (*auth.Invite, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -299,7 +300,7 @@ func (s *MemoryInviteStore) ValidateInviteByHash(tokenHash string) (*auth.Invite
 	return copyInvite(invite), nil
 }
 
-func (s *MemoryInviteStore) MarkInviteUsedByHash(tokenHash string) error {
+func (s *MemoryInviteStore) MarkInviteUsedByHash(_ context.Context, tokenHash string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -311,7 +312,7 @@ func (s *MemoryInviteStore) MarkInviteUsedByHash(tokenHash string) error {
 	return nil
 }
 
-func (s *MemoryInviteStore) CleanExpiredInvites() error {
+func (s *MemoryInviteStore) CleanExpiredInvites(_ context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

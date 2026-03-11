@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -9,9 +10,10 @@ import (
 )
 
 func TestCreateBootstrapInvite(t *testing.T) {
+	ctx := context.Background()
 	invites := authtest.NewMemoryInviteStore()
 
-	token, err := auth.CreateBootstrapInvite(invites, "admin@example.com", 24*time.Hour)
+	token, err := auth.CreateBootstrapInvite(ctx, invites, "admin@example.com", 24*time.Hour)
 	if err != nil {
 		t.Fatalf("failed to create bootstrap invite: %v", err)
 	}
@@ -22,7 +24,7 @@ func TestCreateBootstrapInvite(t *testing.T) {
 
 	// Validate invite by hashing the token
 	hash := auth.HashToken(token)
-	invite, err := invites.ValidateInviteByHash(hash)
+	invite, err := invites.ValidateInviteByHash(ctx, hash)
 	if err != nil {
 		t.Fatalf("failed to validate invite: %v", err)
 	}

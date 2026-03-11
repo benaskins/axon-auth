@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -84,6 +85,7 @@ func TestServiceUserHandler_InvalidBody(t *testing.T) {
 }
 
 func TestServiceUserHandler_DefaultDisplayName(t *testing.T) {
+	ctx := context.Background()
 	server, users, _, _, _ := setupTestServer(t)
 
 	body, _ := json.Marshal(map[string]string{
@@ -98,7 +100,7 @@ func TestServiceUserHandler_DefaultDisplayName(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	user, err := users.GetUserByUsername("xagent-nodisplay")
+	user, err := users.GetUserByUsername(ctx, "xagent-nodisplay")
 	if err != nil {
 		t.Fatalf("user not found: %v", err)
 	}

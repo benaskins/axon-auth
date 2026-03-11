@@ -40,8 +40,10 @@ func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	ctx := r.Context()
+
 	// Check username uniqueness
-	existingByUsername, _ := s.userStore.GetUserByUsername(req.Username)
+	existingByUsername, _ := s.userStore.GetUserByUsername(ctx, req.Username)
 	if existingByUsername != nil {
 		axon.WriteJSON(w, http.StatusConflict, map[string]string{"error": "username already taken"})
 		return
@@ -49,14 +51,14 @@ func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request)
 
 	// Validate invite
 	tokenHash := HashToken(req.Token)
-	invite, err := s.inviteStore.ValidateInviteByHash(tokenHash)
+	invite, err := s.inviteStore.ValidateInviteByHash(ctx, tokenHash)
 	if err != nil {
 		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid or expired invite"})
 		return
 	}
 
 	// Check if user already exists for this invite email
-	existingUser, _ := s.userStore.GetUserByEmail(invite.Email)
+	existingUser, _ := s.userStore.GetUserByEmail(ctx, invite.Email)
 	if existingUser != nil {
 		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "user already exists"})
 		return
@@ -169,8 +171,10 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	ctx := r.Context()
+
 	inviteTokenHash := HashToken(inviteTokenCookie.Value)
-	invite, err := s.inviteStore.ValidateInviteByHash(inviteTokenHash)
+	invite, err := s.inviteStore.ValidateInviteByHash(ctx, inviteTokenHash)
 	if err != nil {
 		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid invite"})
 		return
@@ -223,7 +227,7 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 	}
 
 	// WebAuthn verification succeeded — now create the real user record
-	user, err := s.userStore.CreateUser(regMeta.Username, invite.Email, regMeta.DisplayName, invite.IsBootstrap)
+	user, err := s.userStore.CreateUser(ctx, regMeta.Username, invite.Email, regMeta.DisplayName, invite.IsBootstrap)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateUsername) {
 			axon.WriteJSON(w, http.StatusConflict, map[string]string{"error": "username already taken"})
@@ -239,13 +243,13 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 	if deviceName == "" {
 		deviceName = "Unknown Device"
 	}
-	if err := s.passkeyStore.SavePasskey(user.ID, credential, deviceName); err != nil {
+	if err := s.passkeyStore.SavePasskey(ctx, user.ID, credential, deviceName); err != nil {
 		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save passkey"})
 		return
 	}
 
 	// Mark invite as used
-	if err := s.inviteStore.MarkInviteUsedByHash(inviteTokenHash); err != nil {
+	if err := s.inviteStore.MarkInviteUsedByHash(ctx, inviteTokenHash); err != nil {
 		slog.Error("registration finish: failed to mark invite used", "error", err)
 		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to finalize registration"})
 		return
@@ -258,7 +262,7 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	session, err := s.sessionStore.CreateSession(user.ID, sessionTokenHash, time.Now().Add(s.config.SessionDuration))
+	session, err := s.sessionStore.CreateSession(ctx, user.ID, sessionTokenHash, time.Now().Add(s.config.SessionDuration))
 	if err != nil {
 		axon.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create session"})
 		return

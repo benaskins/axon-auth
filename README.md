@@ -12,6 +12,34 @@ go get github.com/benaskins/axon-auth@latest
 
 axon-auth is a domain package — it provides types, interfaces, and HTTP handlers but no `main` function. You assemble it in your own composition root by supplying store implementations and configuration. See [`example/main.go`](example/main.go) for a minimal wiring example.
 
+```go
+cfg := auth.Config{
+    RPID:            "example.com",
+    RPDisplayName:   "Example App",
+    RPOrigins:       []string{"https://example.com"},
+    CookieDomain:    ".example.com",
+    SecureCookie:    true,
+    SessionDuration: 24 * time.Hour,
+    InviteDuration:  7 * 24 * time.Hour,
+}
+
+// Use authtest stores for development; supply real implementations in production.
+srv, err := auth.NewServer(cfg,
+    authtest.NewMemoryUserStore(),
+    authtest.NewMemorySessionStore(),
+    authtest.NewMemoryPasskeyStore(),
+    authtest.NewMemoryInviteStore(),
+    nil, // optional embed.FS for static files
+)
+if err != nil {
+    log.Fatal(err)
+}
+
+mux := http.NewServeMux()
+mux.Handle("/auth/", http.StripPrefix("/auth", srv.Handler()))
+log.Fatal(http.ListenAndServe(":8080", mux))
+```
+
 ## Key types
 
 - **`Config`** — relying party ID, origins, cookie domain, session/invite durations

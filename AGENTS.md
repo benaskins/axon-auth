@@ -20,7 +20,9 @@ All tests use in-memory mock stores from `authtest/` — no database required.
 - **Domain types** (`types.go`): `User`, `Session`, `Invite`
 - **Token management** (`token.go`): `GenerateToken()`, `HashToken()` — SHA-256 hashed tokens
 - **Server** (`server.go`): HTTP handler composition, routes API endpoints
-- **Handlers**: One file per endpoint group (`handler_register.go`, `handler_login.go`, etc.)
+- **Handlers**: One file per endpoint group (`handler_register.go`, `handler_login.go`, `handler_validate.go`, `handler_logout.go`, `handler_service_user.go`)
+- **Bootstrap** (`bootstrap.go`): `CreateBootstrapInvite`, `PrintBootstrapURL` — admin bootstrap invite creation
+- **Helpers** (`helpers.go`): Internal utilities (e.g. `isLocalRedirect` for CLI auth)
 - **WebAuthn** (`webauthn.go`): Wrapper around go-webauthn library
 - **Config** (`config.go`): All hardcoded values externalized
 - **Static files** (`embed.go`): Pre-built SvelteKit UI embedded via `//go:embed`

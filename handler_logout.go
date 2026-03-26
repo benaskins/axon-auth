@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/benaskins/axon"
@@ -14,7 +15,9 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tokenHash := HashToken(cookie.Value)
-	s.sessionStore.DeleteSessionByHash(r.Context(), tokenHash)
+	if err := s.sessionStore.DeleteSessionByHash(r.Context(), tokenHash); err != nil {
+		slog.Error("logout: failed to delete session", "error", err)
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    "",

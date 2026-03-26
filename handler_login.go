@@ -131,7 +131,7 @@ func (s *Server) handleLoginFinish(w http.ResponseWriter, r *http.Request) {
 	user, err := s.userStore.GetUserByID(ctx, userIDCookie.Value)
 	if err != nil {
 		slog.Error("login finish: user not found", "error", err, "user_id", userIDCookie.Value)
-		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "user not found"})
+		axon.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
 		return
 	}
 

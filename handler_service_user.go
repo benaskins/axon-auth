@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -30,7 +31,8 @@ type serviceUserHandler struct {
 func (h *serviceUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Require a valid internal API key
 	apiKey := r.Header.Get("X-Internal-API-Key")
-	if h.internalAPIKey == "" || apiKey != h.internalAPIKey {
+	if h.internalAPIKey == "" ||
+		subtle.ConstantTimeCompare([]byte(apiKey), []byte(h.internalAPIKey)) != 1 {
 		axon.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}

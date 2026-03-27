@@ -1,3 +1,8 @@
+---
+module: github.com/benaskins/axon-auth
+kind: service
+---
+
 # axon-auth
 
 ## Overview

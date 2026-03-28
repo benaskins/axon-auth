@@ -1,0 +1,18 @@
+name: axon-auth
+purpose: WebAuthn/passkey authentication
+use_when: Auth needed
+deterministic: true
+snippet:
+  imports:
+    - path: os
+    - path: github.com/benaskins/axon
+  requires:
+    - github.com/benaskins/axon
+  setup: |
+    authURL := os.Getenv("AUTH_URL")
+    if authURL == "" {
+      authURL = "http://localhost:9000"
+    }
+    authClient := axon.NewAuthClientPlain(authURL)
+    defer authClient.Close()
+    _ = axon.RequireAuth(authClient)

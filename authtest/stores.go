@@ -223,9 +223,7 @@ func (s *MemoryPasskeyStore) GetUserPasskeys(_ context.Context, userID string) (
 
 	creds := s.passkeys[userID]
 	result := make([]webauthn.Credential, len(creds))
-	for i, c := range creds {
-		result[i] = c
-	}
+	copy(result, creds)
 	return result, nil
 }
 

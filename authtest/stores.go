@@ -24,7 +24,7 @@ func NewMemoryUserStore() *MemoryUserStore {
 	return &MemoryUserStore{users: make(map[string]*auth.User)}
 }
 
-func (s *MemoryUserStore) CreateUser(_ context.Context, username, email, displayName string, isAdmin bool) (*auth.User, error) {
+func (s *MemoryUserStore) CreateUser(_ context.Context, id, username, email, displayName string, isAdmin bool) (*auth.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -35,8 +35,10 @@ func (s *MemoryUserStore) CreateUser(_ context.Context, username, email, display
 		}
 	}
 
-	s.seq++
-	id := fmt.Sprintf("user-%d", s.seq)
+	if id == "" {
+		s.seq++
+		id = fmt.Sprintf("user-%d", s.seq)
+	}
 	now := time.Now()
 	user := &auth.User{
 		ID:          id,

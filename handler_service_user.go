@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/benaskins/axon"
 )
 
@@ -61,7 +63,7 @@ func (h *serviceUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if errors.Is(err, ErrNotFound) {
 		// Create new service user (no passkey, no invite)
 		email := req.Username + "@service.internal"
-		user, err = h.userStore.CreateUser(ctx, req.Username, email, req.DisplayName, false)
+		user, err = h.userStore.CreateUser(ctx, uuid.New().String(), req.Username, email, req.DisplayName, false)
 		if err != nil {
 			slog.Error("service-user: failed to create user", "error", err)
 			axon.WriteError(w, http.StatusInternalServerError, "failed to create user")

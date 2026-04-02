@@ -15,7 +15,7 @@ var (
 )
 
 type UserStore interface {
-	CreateUser(ctx context.Context, username, email, displayName string, isAdmin bool) (*User, error)
+	CreateUser(ctx context.Context, id, username, email, displayName string, isAdmin bool) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserByUsername(ctx context.Context, username string) (*User, error)
 	GetUserByID(ctx context.Context, id string) (*User, error)

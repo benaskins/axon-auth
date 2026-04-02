@@ -17,7 +17,7 @@ func TestLoginBegin(t *testing.T) {
 	server, users, _, _, _ := setupTestServer(t)
 
 	// Create user (without passkeys)
-	user, _ := users.CreateUser(ctx, "testuser", "test@example.com", "Test User", false)
+	user, _ := users.CreateUser(ctx, "", "testuser", "test@example.com", "Test User", false)
 
 	body := map[string]string{
 		"email": user.Email,
@@ -125,7 +125,7 @@ func TestLogout(t *testing.T) {
 	server, users, sessions, _, _ := setupTestServer(t)
 
 	// Create user and session
-	user, _ := users.CreateUser(ctx, "testuser", "test@example.com", "Test User", false)
+	user, _ := users.CreateUser(ctx, "", "testuser", "test@example.com", "Test User", false)
 	token, hash, _ := auth.GenerateToken()
 	sessions.CreateSession(ctx, user.ID, hash, time.Now().Add(7*24*time.Hour))
 

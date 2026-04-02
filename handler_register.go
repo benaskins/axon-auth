@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/benaskins/axon"
+	"github.com/google/uuid"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -64,12 +65,13 @@ func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Build a temporary user for the WebAuthn ceremony (not persisted yet).
-	// The actual user record is created in the finish step after the browser
-	// completes the credential creation, avoiding orphaned rows if the
-	// browser crashes between begin and finish.
+	// Pre-generate the user ID so the WebAuthn credential's userHandle
+	// matches the ID that will be used when the user record is created
+	// in the finish step. This avoids a userHandle/ID mismatch at login.
+	userID := uuid.New().String()
+
 	tempUser := &User{
-		ID:          invite.Email, // deterministic placeholder
+		ID:          userID,
 		Username:    req.Username,
 		Email:       invite.Email,
 		DisplayName: req.DisplayName,
@@ -99,6 +101,17 @@ func (s *Server) handleRegistrationBegin(w http.ResponseWriter, r *http.Request)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "invite_token",
 		Value:    req.Token,
+		MaxAge:   300,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   s.config.SecureCookie,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	// Store pre-generated user ID for finish step
+	http.SetCookie(w, &http.Cookie{
+		Name:     "registration_user_id",
+		Value:    userID,
 		MaxAge:   300,
 		Path:     "/",
 		HttpOnly: true,
@@ -180,6 +193,13 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Get pre-generated user ID from begin step
+	userIDCookie, err := r.Cookie("registration_user_id")
+	if err != nil {
+		axon.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "no registration user ID"})
+		return
+	}
+
 	// Retrieve registration metadata (username, display_name) from cookie
 	regMetaCookie, err := r.Cookie("registration_meta")
 	if err != nil {
@@ -202,7 +222,7 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 
 	// Build temporary user for WebAuthn verification (matches begin step)
 	tempUser := &User{
-		ID:          invite.Email,
+		ID:          userIDCookie.Value,
 		Username:    regMeta.Username,
 		Email:       invite.Email,
 		DisplayName: regMeta.DisplayName,
@@ -227,7 +247,7 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 	}
 
 	// WebAuthn verification succeeded — now create the real user record
-	user, err := s.userStore.CreateUser(ctx, regMeta.Username, invite.Email, regMeta.DisplayName, invite.IsBootstrap)
+	user, err := s.userStore.CreateUser(ctx, userIDCookie.Value, regMeta.Username, invite.Email, regMeta.DisplayName, invite.IsBootstrap)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateUsername) {
 			axon.WriteJSON(w, http.StatusConflict, map[string]string{"error": "username already taken"})

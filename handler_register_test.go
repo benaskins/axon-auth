@@ -95,7 +95,7 @@ func TestRegistrationBegin_UsernameUniqueness(t *testing.T) {
 	server, users, _, _, invites := setupTestServer(t)
 
 	// Create an existing user with username "taken"
-	users.CreateUser(ctx, "", "taken", "existing@example.com", "Existing User", false)
+	users.CreateUser(ctx, "", "taken", "existing@example.com", "", "Existing User", []string{"user"})
 
 	token, hash, _ := auth.GenerateToken()
 	invites.CreateInvite(ctx, "new@example.com", hash, time.Now().Add(24*time.Hour), false)

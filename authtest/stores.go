@@ -24,7 +24,7 @@ func NewMemoryUserStore() *MemoryUserStore {
 	return &MemoryUserStore{users: make(map[string]*auth.User)}
 }
 
-func (s *MemoryUserStore) CreateUser(_ context.Context, id, username, email, displayName string, isAdmin bool) (*auth.User, error) {
+func (s *MemoryUserStore) CreateUser(_ context.Context, id, username, email, passwordHash, displayName string, roles []string) (*auth.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -33,6 +33,9 @@ func (s *MemoryUserStore) CreateUser(_ context.Context, id, username, email, dis
 		if u.Username == username {
 			return nil, auth.ErrDuplicateUsername
 		}
+		if u.Email == email {
+			return nil, auth.ErrDuplicateEmail
+		}
 	}
 
 	if id == "" {
@@ -40,14 +43,28 @@ func (s *MemoryUserStore) CreateUser(_ context.Context, id, username, email, dis
 		id = fmt.Sprintf("user-%d", s.seq)
 	}
 	now := time.Now()
+	
+	// Convert roles to Role slice
+	roleSlice := make([]auth.Role, len(roles))
+	isAdmin := false
+	for i, r := range roles {
+		roleSlice[i] = auth.Role(r)
+		if auth.Role(r) == auth.RoleAdmin {
+			isAdmin = true
+		}
+	}
+
 	user := &auth.User{
-		ID:          id,
-		Username:    username,
-		Email:       email,
-		DisplayName: displayName,
-		IsAdmin:     isAdmin,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:            id,
+		Username:      username,
+		Email:         email,
+		PasswordHash:  passwordHash,
+		DisplayName:   displayName,
+		Roles:         roleSlice,
+		IsAdmin:       isAdmin,
+		IsActive:      true,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 	s.users[id] = user
 	return copyUser(user), nil
@@ -106,6 +123,44 @@ func (s *MemoryUserStore) DeleteUser(_ context.Context, id string) error {
 	return nil
 }
 
+func (s *MemoryUserStore) UpdateUser(_ context.Context, user *auth.User) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, ok := s.users[user.ID]
+	if !ok {
+		return auth.ErrNotFound
+	}
+	user.UpdatedAt = time.Now()
+	s.users[user.ID] = copyUser(user)
+	return nil
+}
+
+func (s *MemoryUserStore) SetUserRoles(_ context.Context, userID string, roles []string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	u, ok := s.users[userID]
+	if !ok {
+		return auth.ErrNotFound
+	}
+
+	roleSlice := make([]auth.Role, len(roles))
+	isAdmin := false
+	for i, r := range roles {
+		roleSlice[i] = auth.Role(r)
+		if auth.Role(r) == auth.RoleAdmin {
+			isAdmin = true
+		}
+	}
+	
+	u.Roles = roleSlice
+	u.IsAdmin = isAdmin
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
+// SetAdmin is deprecated, use SetUserRoles instead
 func (s *MemoryUserStore) SetAdmin(_ context.Context, id string, isAdmin bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -115,12 +170,17 @@ func (s *MemoryUserStore) SetAdmin(_ context.Context, id string, isAdmin bool) e
 		return auth.ErrNotFound
 	}
 	u.IsAdmin = isAdmin
+	if isAdmin {
+		u.Roles = []auth.Role{auth.RoleAdmin}
+	}
 	u.UpdatedAt = time.Now()
 	return nil
 }
 
 func copyUser(u *auth.User) *auth.User {
 	c := *u
+	c.Roles = make([]auth.Role, len(u.Roles))
+	copy(c.Roles, u.Roles)
 	return &c
 }
 
@@ -198,6 +258,82 @@ func (s *MemorySessionStore) CleanExpiredSessions(_ context.Context) error {
 
 func copySession(s *auth.Session) *auth.Session {
 	c := *s
+	return &c
+}
+
+// MemoryJWTTokenStore is an in-memory implementation of auth.JWTTokenStore.
+type MemoryJWTTokenStore struct {
+	mu    sync.RWMutex
+	tokens map[string]*auth.JWTToken // keyed by token
+	seq   int
+}
+
+func NewMemoryJWTTokenStore() *MemoryJWTTokenStore {
+	return &MemoryJWTTokenStore{tokens: make(map[string]*auth.JWTToken)}
+}
+
+func (s *MemoryJWTTokenStore) CreateToken(_ context.Context, userID, token string, expiresAt time.Time) (*auth.JWTToken, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.seq++
+	now := time.Now()
+	jwtToken := &auth.JWTToken{
+		ID:        fmt.Sprintf("jwt-%d", s.seq),
+		UserID:    userID,
+		Token:     token,
+		ExpiresAt: expiresAt,
+		CreatedAt: now,
+	}
+	s.tokens[token] = jwtToken
+	return copyJWTToken(jwtToken), nil
+}
+
+func (s *MemoryJWTTokenStore) ValidateToken(_ context.Context, token string) (*auth.JWTToken, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	jwtToken, ok := s.tokens[token]
+	if !ok || jwtToken.ExpiresAt.Before(time.Now()) {
+		return nil, auth.ErrNotFound
+	}
+	return copyJWTToken(jwtToken), nil
+}
+
+func (s *MemoryJWTTokenStore) DeleteToken(_ context.Context, token string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.tokens, token)
+	return nil
+}
+
+func (s *MemoryJWTTokenStore) DeleteUserTokens(_ context.Context, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for hash, jwtToken := range s.tokens {
+		if jwtToken.UserID == userID {
+			delete(s.tokens, hash)
+		}
+	}
+	return nil
+}
+
+func (s *MemoryJWTTokenStore) CleanExpiredTokens(_ context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	for hash, jwtToken := range s.tokens {
+		if jwtToken.ExpiresAt.Before(now) {
+			delete(s.tokens, hash)
+		}
+	}
+	return nil
+}
+
+func copyJWTToken(t *auth.JWTToken) *auth.JWTToken {
+	c := *t
 	return &c
 }
 
@@ -327,5 +463,82 @@ func (s *MemoryInviteStore) CleanExpiredInvites(_ context.Context) error {
 
 func copyInvite(i *auth.Invite) *auth.Invite {
 	c := *i
+	return &c
+}
+
+// MemoryPasswordResetStore is an in-memory implementation of auth.PasswordResetStore.
+type MemoryPasswordResetStore struct {
+	mu    sync.RWMutex
+	tokens map[string]*auth.PasswordResetToken // keyed by token hash
+	seq   int
+}
+
+func NewMemoryPasswordResetStore() *MemoryPasswordResetStore {
+	return &MemoryPasswordResetStore{tokens: make(map[string]*auth.PasswordResetToken)}
+}
+
+func (s *MemoryPasswordResetStore) CreateResetToken(_ context.Context, userID, tokenHash string, expiresAt time.Time) (*auth.PasswordResetToken, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.seq++
+	now := time.Now()
+	resetToken := &auth.PasswordResetToken{
+		ID:        fmt.Sprintf("reset-%d", s.seq),
+		UserID:    userID,
+		TokenHash: tokenHash,
+		Used:      false,
+		CreatedAt: now,
+		ExpiresAt: expiresAt,
+	}
+	s.tokens[tokenHash] = resetToken
+	return copyResetToken(resetToken), nil
+}
+
+func (s *MemoryPasswordResetStore) ValidateResetTokenByHash(_ context.Context, tokenHash string) (*auth.PasswordResetToken, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	resetToken, ok := s.tokens[tokenHash]
+	if !ok || resetToken.Used || resetToken.ExpiresAt.Before(time.Now()) {
+		return nil, auth.ErrNotFound
+	}
+	return copyResetToken(resetToken), nil
+}
+
+func (s *MemoryPasswordResetStore) MarkResetTokenUsedByHash(_ context.Context, tokenHash string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	resetToken, ok := s.tokens[tokenHash]
+	if !ok {
+		return auth.ErrNotFound
+	}
+	resetToken.Used = true
+	return nil
+}
+
+func (s *MemoryPasswordResetStore) DeleteResetTokenByHash(_ context.Context, tokenHash string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.tokens, tokenHash)
+	return nil
+}
+
+func (s *MemoryPasswordResetStore) CleanExpiredResetTokens(_ context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	for hash, resetToken := range s.tokens {
+		if resetToken.ExpiresAt.Before(now) {
+			delete(s.tokens, hash)
+		}
+	}
+	return nil
+}
+
+func copyResetToken(t *auth.PasswordResetToken) *auth.PasswordResetToken {
+	c := *t
 	return &c
 }

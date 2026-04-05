@@ -247,7 +247,7 @@ func (s *Server) handleRegistrationFinish(w http.ResponseWriter, r *http.Request
 	}
 
 	// WebAuthn verification succeeded — now create the real user record
-	user, err := s.userStore.CreateUser(ctx, userIDCookie.Value, regMeta.Username, invite.Email, regMeta.DisplayName, invite.IsBootstrap)
+	user, err := s.userStore.CreateUser(ctx, userIDCookie.Value, regMeta.Username, invite.Email, "", regMeta.DisplayName, []string{string(RoleUser)})
 	if err != nil {
 		if errors.Is(err, ErrDuplicateUsername) {
 			axon.WriteJSON(w, http.StatusConflict, map[string]string{"error": "username already taken"})

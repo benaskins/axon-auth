@@ -92,8 +92,8 @@ func RequireAuth(userStore UserStore, sessionStore SessionStore, jwtManager *JWT
 			if authHeader != "" {
 				parts := strings.SplitN(authHeader, " ", 2)
 				if len(parts) == 2 && parts[0] == "Bearer" {
-					claims, err := jwtManager.ValidateToken(parts[1])
-					if err == nil {
+					claims, jwtErr := jwtManager.ValidateToken(parts[1])
+					if jwtErr == nil {
 						user, err = userStore.GetUserByID(r.Context(), claims.UserID)
 					}
 				}
@@ -101,10 +101,10 @@ func RequireAuth(userStore UserStore, sessionStore SessionStore, jwtManager *JWT
 
 			// Try session cookie if JWT failed
 			if user == nil {
-				cookie, err := r.Cookie("session")
-				if err == nil {
-					session, err := sessionStore.ValidateSessionByHash(r.Context(), HashToken(cookie.Value))
-					if err == nil {
+				cookie, cookieErr := r.Cookie("session")
+				if cookieErr == nil {
+					session, sessionErr := sessionStore.ValidateSessionByHash(r.Context(), HashToken(cookie.Value))
+					if sessionErr == nil {
 						user, err = userStore.GetUserByID(r.Context(), session.UserID)
 					}
 				}

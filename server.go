@@ -18,7 +18,6 @@ type Server struct {
 	jwtTokenStore      JWTTokenStore
 	passkeyStore       PasskeyStore
 	inviteStore        InviteStore
-	passwordResetStore PasswordResetStore
 	webauthn           *WebAuthnWrapper
 	jwtManager         *JWTManager
 	rateLimiter        *RateLimiter

@@ -2,10 +2,12 @@ package auth
 
 import (
 	"errors"
+
+	"github.com/benaskins/axon"
 )
 
 var (
-	ErrNotFound          = errors.New("not found")
+	ErrNotFound          = axon.ErrNotFound
 	ErrDuplicateUsername = errors.New("username already taken")
 	ErrDuplicateEmail    = errors.New("email already registered")
 	
@@ -25,6 +27,6 @@ var (
 	ErrRateLimited = errors.New("too many requests, please try again later")
 	
 	// RBAC errors
-	ErrUnauthorized = errors.New("unauthorized")
+	ErrUnauthorized = axon.ErrUnauthorized
 	ErrForbidden    = errors.New("forbidden")
 )
